@@ -38,22 +38,38 @@ function Player() {
     }
   }
 
-  async function revealTicket(ticketNumber) {
-    if (revealed[ticketNumber] || loading) return
+  async function revealTicket(ticketNumber, position) {
+    const key = ticketNumber + '-' + position
+    if (revealed[key] || loading) return
     setLoading(true); setMessage('')
     try {
       const { data, error } = await supabase.functions.invoke('redeem-code', {
-        body: { action: 'reveal', code: code.trim().toUpperCase(), ticket_number: ticketNumber }
+        body: { action: 'reveal', code: code.trim().toUpperCase(), ticket_number: ticketNumber, position }
       })
       if (error) throw error
       if (data?.error) throw new Error(data.error)
-      setRevealed(old => ({ ...old, [ticketNumber]: data }))
-      setParticipation(old => ({ ...old, tickets: old.tickets.map(t => t.ticket_number === ticketNumber ? { ...t, status: 'revealed' } : t) }))
+      setRevealed(old => ({ ...old, [key]: data }))
+      setParticipation(old => ({ ...old, tickets: old.tickets.map(t => t.ticket_number === ticketNumber ? { ...t, revealed_positions: data.revealed_positions } : t) }))
     } catch (error) {
-      setMessage(error.message || 'No se pudo revelar el ticket.')
+      setMessage(error.message || 'No se pudo revelar la casilla.')
     } finally {
       setLoading(false)
     }
+  }
+
+  function symbolEmoji(symbol) {
+    const name = (symbol?.name || '').toLowerCase()
+    if (name.includes('auto') || name.includes('veh')) return '🚗'
+    if (name.includes('dinero') || name.includes('efectivo') || name.includes('billete')) return '💵'
+    if (name.includes('celular') || name.includes('teléfono') || name.includes('telefono')) return '📱'
+    if (name.includes('moto')) return '🏍️'
+    if (name.includes('regalo')) return '🎁'
+    if (name.includes('diamante') || name.includes('joya')) return '💎'
+    if (name.includes('trofeo') || name.includes('copa')) return '🏆'
+    if (name.includes('reloj')) return '⌚'
+    if (name.includes('consola') || name.includes('juego')) return '🎮'
+    if (name.includes('premio')) return '🎉'
+    return '🎁'
   }
 
   return <main className="page">
@@ -68,7 +84,7 @@ function Player() {
         <button disabled={loading}>{loading ? 'Verificando…' : 'CONTINUAR'}</button>
       </form>
       {message && <div className="notice" role="status">{message}</div>}
-      {participation && <section className="ticket-area"><h2>{participation.campaign}</h2><p>Seleccioná cada ticket para descubrir su resultado.</p><div className="ticket-grid">{participation.tickets.map(ticket => <article className="ticket-card" key={ticket.ticket_number}><strong>Ticket #{ticket.ticket_number}</strong>{revealed[ticket.ticket_number] ? <div className={revealed[ticket.ticket_number].won ? 'ticket-win' : 'ticket-result'}><b>{revealed[ticket.ticket_number].result}</b>{revealed[ticket.ticket_number].redeem_code && <p>Código para cobrar: <strong>{revealed[ticket.ticket_number].redeem_code}</strong><small>Guardá este código. Se muestra una sola vez.</small></p>}</div> : <button disabled={loading || ticket.status !== 'available'} onClick={() => revealTicket(ticket.ticket_number)}>{ticket.status === 'revealed' ? 'Ya raspado' : 'RASPAR TICKET'}</button>}</article>)}</div></section>}
+      {participation && <section className="ticket-area"><h2>{participation.campaign}</h2><p>¡Raspá las 10 casillas, una por una! Si juntás 3 imágenes iguales, ganás el premio.</p><div className="ticket-grid">{participation.tickets.map(ticket => <article className="ticket-card" key={ticket.ticket_number}><strong>Ticket #{ticket.ticket_number}</strong><div className="scratch-grid">{Array.from({length:10},(_,i)=>{const cell=revealed[ticket.ticket_number+'-'+(i+1)];const wasRevealed=(ticket.revealed_positions||[]).includes(i+1);return <button type="button" className={'scratch-cell '+(cell?'is-revealed':'')} key={i} disabled={loading||wasRevealed} onClick={()=>revealTicket(ticket.ticket_number,i+1)}>{cell?.symbol?<><span className="scratch-emoji">{symbolEmoji(cell.symbol)}</span><small>{cell.symbol.name}</small></>:wasRevealed?'✓':'✦'}</button>})}</div>{Object.entries(revealed).filter(([key])=>key.startsWith(ticket.ticket_number+'-')).some(([,v])=>v.won)&&<div className="ticket-win"><b>¡FELICIDADES! GANASTE</b><p>{Object.entries(revealed).filter(([key])=>key.startsWith(ticket.ticket_number+'-')).find(([,v])=>v.won)?.[1].prize}</p>{Object.entries(revealed).filter(([key])=>key.startsWith(ticket.ticket_number+'-')).find(([,v])=>v.won)?.[1].redeem_code&&<p>Código de canje: <strong>{Object.entries(revealed).filter(([key])=>key.startsWith(ticket.ticket_number+'-')).find(([,v])=>v.won)?.[1].redeem_code}</strong><small>Guardalo. Se muestra una sola vez.</small></p>}</div>}</article>)}</div></section>}
       <div className="secure">🔒 Cada ticket se revela una sola vez. Los resultados se validan en el servidor.</div>
     </section>
     <footer>© {new Date().getFullYear()} Raspaditas Paraguay · Términos y condiciones · Política de privacidad · <a href="/admin">Administración</a></footer>
