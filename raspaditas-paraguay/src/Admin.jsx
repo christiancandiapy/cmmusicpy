@@ -15,6 +15,10 @@ export default function Admin() {
   const [issuedLinks, setIssuedLinks] = useState([])
   const [campaignName, setCampaignName] = useState('')
   const [campaignDescription, setCampaignDescription] = useState('')
+  const [sellerCode, setSellerCode] = useState('')
+  const [sellerMessage, setSellerMessage] = useState('')
+  const [sellerPrize, setSellerPrize] = useState(null)
+  const [sellerBusy, setSellerBusy] = useState(false)
 
   useEffect(() => {
     if (!supabase) return
@@ -27,7 +31,7 @@ export default function Admin() {
 
   async function load() {
     const { data: p, error: pe } = await supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle()
-    if (pe || !p || !['admin', 'super_admin'].includes(p.role)) { setProfile(null); setMessage('Tu usuario no tiene permisos de administrador. Solicitá al administrador principal que te asigne un rol autorizado.'); return }
+    if (pe || !p || !['admin', 'super_admin', 'seller'].includes(p.role)) { setProfile(null); setMessage('Tu usuario no tiene permisos de administrador. Solicitá al administrador principal que te asigne un rol autorizado.'); return }
     setProfile(p)
     const [c, co] = await Promise.all([
       supabase.from('campaigns').select('*').order('created_at', { ascending: false }),
@@ -42,6 +46,17 @@ export default function Admin() {
     e.preventDefault(); setBusy(true); setMessage('')
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     setBusy(false); if (error) setMessage(error.message)
+  }
+
+  async function redeemPrize(e) {
+    e.preventDefault()
+    setSellerBusy(true); setSellerMessage(''); setSellerPrize(null)
+    const { data, error } = await supabase.rpc('redeem_prize', { p_code: sellerCode.trim().toUpperCase() })
+    setSellerBusy(false)
+    if (error) { setSellerMessage(error.message); return }
+    setSellerPrize(data)
+    setSellerMessage(data?.message || 'Canje registrado.')
+    setSellerCode('')
   }
 
   async function createCampaign(e) {
@@ -91,6 +106,8 @@ export default function Admin() {
   if (!supabase) return <main className="admin-shell"><section className="login-card"><h1>Panel administrativo</h1><p>Conectá primero el proyecto con Supabase desde las variables de entorno de Netlify.</p></section></main>
   if (!session) return <main className="admin-shell"><form className="login-card" onSubmit={login}><a className="back-link" href="/">← Volver al juego</a><div className="eyebrow">RASPADITAS PARAGUAY</div><h1>Panel administrativo</h1><p>Acceso exclusivo para administradores.</p><label>Correo electrónico<input type="email" required value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Contraseña<input type="password" required value={password} onChange={e=>setPassword(e.target.value)}/></label><button disabled={busy}>{busy?'Ingresando…':'INICIAR SESIÓN'}</button>{message&&<div className="notice">{message}</div>}</form></main>
   if (!profile) return <main className="admin-shell"><section className="login-card"><h1>Acceso restringido</h1><p>{message || 'Verificando permisos…'}</p><button onClick={()=>supabase.auth.signOut()}>Cerrar sesión</button></section></main>
+
+  if (profile?.role === 'seller') return <main className="admin-shell"><header className="admin-top"><div className="brand-link"><div className="brand-mark">RP</div><div><strong>RASPAdITAS PARAGUAY</strong><small>Panel de vendedor</small></div></div><button className="secondary" onClick={()=>supabase.auth.signOut()}>Cerrar sesión</button></header><section className="admin-content"><div className="admin-heading"><div><div className="eyebrow">CANJE DE PREMIOS</div><h1>Validar premio</h1></div></div><section className="panel"><p className="muted">Ingresá el código que te presenta el participante. Cada código puede canjearse una sola vez.</p><form className="stack-form" onSubmit={redeemPrize}><label>Código de premio<input required autoCapitalize="characters" value={sellerCode} onChange={e=>setSellerCode(e.target.value)} placeholder="RP-XXXXXXXX"/></label><button disabled={sellerBusy}>{sellerBusy?'Verificando…':'Validar y confirmar entrega'}</button></form>{sellerMessage&&<div className="notice" role="status">{sellerMessage}</div>}{sellerPrize?.success&&<div className="panel"><h2>Canje confirmado</h2><strong>{sellerPrize.prize}</strong><p>{new Date(sellerPrize.redeemed_at).toLocaleString('es-PY')}</p></div>}</section></section></main>
 
   return <main className="admin-shell">
     <header className="admin-top"><div className="brand-link"><div className="brand-mark">RP</div><div><strong>RASPAdITAS PARAGUAY</strong><small>Panel de administración</small></div></div><button className="secondary" onClick={()=>supabase.auth.signOut()}>Cerrar sesión</button></header>
