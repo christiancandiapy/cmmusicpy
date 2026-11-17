@@ -24,6 +24,9 @@ export default function Admin() {
   const [sellerMessage, setSellerMessage] = useState('')
   const [sellerPrize, setSellerPrize] = useState(null)
   const [sellerBusy, setSellerBusy] = useState(false)
+  const [newSellerName, setNewSellerName] = useState('')
+  const [newSellerEmail, setNewSellerEmail] = useState('')
+  const [sellerInviteMessage, setSellerInviteMessage] = useState('')
 
   useEffect(() => {
     if (!supabase) return
@@ -71,6 +74,22 @@ export default function Admin() {
     e.preventDefault(); setBusy(true); setMessage('')
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     setBusy(false); if (error) setMessage(error.message)
+  }
+
+  async function createSeller(e) {
+    e.preventDefault()
+    setSellerBusy(true); setSellerInviteMessage('')
+    const { data, error } = await supabase.functions.invoke('create-seller', {
+      body: { full_name: newSellerName.trim(), email: newSellerEmail.trim() }
+    })
+    setSellerBusy(false)
+    if (error || data?.error) {
+      setSellerInviteMessage(data?.error || error.message)
+      return
+    }
+    setSellerInviteMessage(data?.message || 'Invitación enviada.')
+    setNewSellerName('')
+    setNewSellerEmail('')
   }
 
   async function redeemPrize(e) {
@@ -140,6 +159,7 @@ export default function Admin() {
       <div className="admin-heading"><div><div className="eyebrow">CENTRO DE CONTROL</div><h1>Administración</h1></div><button className="secondary" onClick={load}>Actualizar</button></div>
       {message&&<div className="notice">{message}</div>}
       <div className="stats-grid"><div className="stat-card"><span>Campañas</span><strong>{campaigns.length}</strong></div><div className="stat-card"><span>Códigos registrados</span><strong>{codes.length}</strong></div></div>
+      <section className="panel"><h2>Crear cuenta de vendedor</h2><p className="muted">Se enviará una invitación para que el vendedor configure su propia contraseña. Solo podrá validar canjes.</p><form className="stack-form" onSubmit={createSeller}><label>Nombre completo<input required maxLength="120" value={newSellerName} onChange={e=>setNewSellerName(e.target.value)} placeholder="Nombre y apellido"/></label><label>Correo electrónico<input type="email" required value={newSellerEmail} onChange={e=>setNewSellerEmail(e.target.value)} placeholder="vendedor@gmail.com"/></label><button disabled={sellerBusy}>{sellerBusy?'Enviando…':'Crear vendedor'}</button></form>{sellerInviteMessage&&<div className="notice" role="status">{sellerInviteMessage}</div>}</section>
       <section className="panel"><h2>Crear nueva campaña</h2><p className="muted">Primero creá una campaña. Se guardará como borrador y todavía no estará disponible para participantes.</p><form className="stack-form" onSubmit={createCampaign}><label>Nombre de la campaña<input required maxLength="100" value={campaignName} onChange={e=>setCampaignName(e.target.value)} placeholder="Ej.: Raspadita especial de fin de año"/></label><label>Descripción<textarea maxLength="1000" value={campaignDescription} onChange={e=>setCampaignDescription(e.target.value)} placeholder="Detalles y condiciones generales"/></label><button disabled={busy}>{busy?'Guardando…':'Crear campaña'}</button></form></section>
       <section className="panel"><h2>Campañas registradas</h2>{campaigns.length ? <div className="table-wrap"><table><thead><tr><th>Nombre</th><th>Estado</th><th>Creada</th></tr></thead><tbody>{campaigns.map(c=><tr key={c.id}><td>{c.name}</td><td>{c.status}</td><td>{new Date(c.created_at).toLocaleDateString('es-PY')}</td></tr>)}</tbody></table></div> : <p className="muted">Todavía no hay campañas creadas.</p>}</section>
       <section className="panel"><h2>Premios de la campaña</h2><form className="stack-form" onSubmit={createPrize}><label>Campaña<select required value={selectedCampaign} onChange={e=>setSelectedCampaign(e.target.value)}>{campaigns.map(c=><option key={c.id} value={c.id}>{c.name} · {c.status}</option>)}</select></label><label>Nombre del premio<input required maxLength="100" value={prizeName} onChange={e=>setPrizeName(e.target.value)} placeholder="Ej.: Vale de G. 50.000"/></label><label>Descripción<input maxLength="500" value={prizeDescription} onChange={e=>setPrizeDescription(e.target.value)}/></label><label>Cantidad disponible<input type="number" min="1" max="10000" required value={prizeQuantity} onChange={e=>setPrizeQuantity(e.target.value)}/></label><button disabled={busy || !campaigns.length}>{busy?'Guardando…':'Agregar premio'}</button></form>{prizes.filter(p=>p.campaign_id===selectedCampaign).map(p=><div className="share-row" key={p.id}><div><strong>{p.name}</strong><small>Reservados: {p.quantity_reserved} / {p.quantity_total}</small></div></div>)}<button className="secondary" disabled={!selectedCampaign || !prizes.some(p=>p.campaign_id===selectedCampaign && p.active && p.quantity_reserved<p.quantity_total)} onClick={activateCampaign}>Activar campaña seleccionada</button></section>
