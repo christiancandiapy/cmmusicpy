@@ -50,7 +50,24 @@ export default function Admin() {
     if (!selectedCampaign && c.data?.length) setSelectedCampaign(c.data[0].id)
   }
 
-  async function createPrize(e) {\n    e.preventDefault()\n    if (!selectedCampaign) return setMessage('Seleccioná una campaña.')\n    setBusy(true); setMessage('')\n    const { error } = await supabase.from('prizes').insert({ campaign_id: selectedCampaign, name: prizeName.trim(), description: prizeDescription.trim(), quantity_total: Number(prizeQuantity), quantity_reserved: 0, active: true })\n    setBusy(false)\n    if (error) { setMessage('No se pudo guardar el premio: ' + error.message); return }\n    setPrizeName(''); setPrizeDescription(''); setPrizeQuantity(1); setMessage('Premio agregado correctamente.'); await load()\n  }\n\n  async function activateCampaign() {\n    if (!selectedCampaign) return setMessage('Seleccioná una campaña.')\n    const { error } = await supabase.from('campaigns').update({ status: 'active' }).eq('id', selectedCampaign)\n    if (error) { setMessage('No se pudo activar: ' + error.message); return }\n    setMessage('Campaña activada. Ya puede emitir códigos con premios disponibles.'); await load()\n  }\n\n  async function login(e) {
+  async function createPrize(e) {
+    e.preventDefault()
+    if (!selectedCampaign) return setMessage('Seleccioná una campaña.')
+    setBusy(true); setMessage('')
+    const { error } = await supabase.from('prizes').insert({ campaign_id: selectedCampaign, name: prizeName.trim(), description: prizeDescription.trim(), quantity_total: Number(prizeQuantity), quantity_reserved: 0, active: true })
+    setBusy(false)
+    if (error) { setMessage('No se pudo guardar el premio: ' + error.message); return }
+    setPrizeName(''); setPrizeDescription(''); setPrizeQuantity(1); setMessage('Premio agregado correctamente.'); await load()
+  }
+
+  async function activateCampaign() {
+    if (!selectedCampaign) return setMessage('Seleccioná una campaña.')
+    const { error } = await supabase.from('campaigns').update({ status: 'active' }).eq('id', selectedCampaign)
+    if (error) { setMessage('No se pudo activar: ' + error.message); return }
+    setMessage('Campaña activada. Ya puede emitir códigos con premios disponibles.'); await load()
+  }
+
+  async function login(e) {
     e.preventDefault(); setBusy(true); setMessage('')
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     setBusy(false); if (error) setMessage(error.message)
