@@ -6,6 +6,8 @@ function Player() {
   const [code, setCode] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
+  const [participation, setParticipation] = useState(null)
+  const [revealed, setRevealed] = useState({})
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -16,17 +18,39 @@ function Player() {
   async function checkCode(event) {
     event.preventDefault()
     setMessage('')
+    setParticipation(null)
+    setRevealed({})
     if (!code.trim()) return setMessage('Ingresá tu código de participación.')
     if (!supabase) return setMessage('El proyecto todavía no está conectado a Supabase.')
     setLoading(true)
     try {
       const { data, error } = await supabase.functions.invoke('redeem-code', {
-        body: { code: code.trim().toUpperCase() }
+        body: { action: 'check', code: code.trim().toUpperCase() }
       })
       if (error) throw error
-      setMessage(data?.message || 'Código recibido.')
+      if (data?.error) throw new Error(data.error)
+      setParticipation(data)
+      setMessage('Código validado. Elegí un ticket para raspar.')
     } catch (error) {
       setMessage(error.message || 'No se pudo validar el código.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function revealTicket(ticketNumber) {
+    if (revealed[ticketNumber] || loading) return
+    setLoading(true); setMessage('')
+    try {
+      const { data, error } = await supabase.functions.invoke('redeem-code', {
+        body: { action: 'reveal', code: code.trim().toUpperCase(), ticket_number: ticketNumber }
+      })
+      if (error) throw error
+      if (data?.error) throw new Error(data.error)
+      setRevealed(old => ({ ...old, [ticketNumber]: data }))
+      setParticipation(old => ({ ...old, tickets: old.tickets.map(t => t.ticket_number === ticketNumber ? { ...t, status: 'revealed' } : t) }))
+    } catch (error) {
+      setMessage(error.message || 'No se pudo revelar el ticket.')
     } finally {
       setLoading(false)
     }
@@ -44,7 +68,8 @@ function Player() {
         <button disabled={loading}>{loading ? 'Verificando…' : 'CONTINUAR'}</button>
       </form>
       {message && <div className="notice" role="status">{message}</div>}
-      <div className="secure">🔒 Cada código debe utilizarse una sola vez. La validación se realiza en el servidor.</div>
+      {participation && <section className="ticket-area"><h2>{participation.campaign}</h2><p>Seleccioná cada ticket para descubrir su resultado.</p><div className="ticket-grid">{participation.tickets.map(ticket => <article className="ticket-card" key={ticket.ticket_number}><strong>Ticket #{ticket.ticket_number}</strong>{revealed[ticket.ticket_number] ? <div className={revealed[ticket.ticket_number].won ? 'ticket-win' : 'ticket-result'}><b>{revealed[ticket.ticket_number].result}</b>{revealed[ticket.ticket_number].redeem_code && <p>Código para cobrar: <strong>{revealed[ticket.ticket_number].redeem_code}</strong><small>Guardá este código. Se muestra una sola vez.</small></p>}</div> : <button disabled={loading || ticket.status !== 'available'} onClick={() => revealTicket(ticket.ticket_number)}>{ticket.status === 'revealed' ? 'Ya raspado' : 'RASPAR TICKET'}</button>}</article>)}</div></section>}
+      <div className="secure">🔒 Cada ticket se revela una sola vez. Los resultados se validan en el servidor.</div>
     </section>
     <footer>© {new Date().getFullYear()} Raspaditas Paraguay · Términos y condiciones · Política de privacidad · <a href="/admin">Administración</a></footer>
   </main>
