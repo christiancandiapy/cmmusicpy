@@ -38,15 +38,15 @@ export default function Admin() {
     const { data: p, error: pe } = await supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle()
     if (pe || !p || !['admin', 'super_admin', 'seller'].includes(p.role)) { setProfile(null); setMessage('Tu usuario no tiene permisos de administrador. Solicitá al administrador principal que te asigne un rol autorizado.'); return }
     setProfile(p)
-    const [c, co] = await Promise.all([
+    const [c, co, pr] = await Promise.all([
       supabase.from('campaigns').select('*').order('created_at', { ascending: false }),
       supabase.from('participation_codes').select('id, campaign_id, code_hint, status, assigned_prize_id, tickets_count, created_at').order('created_at', { ascending: false }).limit(100),
       supabase.from('prizes').select('*').order('created_at', { ascending: false })
     ])
-    if (c.error || co.error || arguments[0]?.error) setMessage('No se pudieron cargar los datos. Revisá las tablas y permisos RLS.')
+    if (c.error || co.error || pr.error) setMessage('No se pudieron cargar los datos. Revisá las tablas y permisos RLS.')
     setCampaigns(c.data || [])
     setCodes(co.data || [])
-    setPrizes(arguments[0]?.data || [])
+    setPrizes(pr.data || [])
     if (!selectedCampaign && c.data?.length) setSelectedCampaign(c.data[0].id)
   }
 
