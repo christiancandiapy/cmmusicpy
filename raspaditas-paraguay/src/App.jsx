@@ -30,7 +30,10 @@ function Player() {
       if (error) throw error
       if (data?.error) throw new Error(data.error)
       setParticipation(data)
-      setMessage('Código validado. Elegí un ticket para raspar.')
+      const prior = {}
+      for (const ticket of (data.tickets || [])) for (const cell of (ticket.revealed_cells || [])) prior[ticket.ticket_number + '-' + cell.position] = { symbol: cell.symbol }
+      setRevealed(prior)
+      setMessage('Código validado. Elegí una casilla para raspar.')
     } catch (error) {
       setMessage(error.message || 'No se pudo validar el código.')
     } finally {
