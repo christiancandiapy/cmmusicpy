@@ -15,6 +15,11 @@ export default function Admin() {
   const [issuedLinks, setIssuedLinks] = useState([])
   const [campaignName, setCampaignName] = useState('')
   const [campaignDescription, setCampaignDescription] = useState('')
+  const [prizes, setPrizes] = useState([])
+  const [selectedCampaign, setSelectedCampaign] = useState('')
+  const [prizeName, setPrizeName] = useState('')
+  const [prizeDescription, setPrizeDescription] = useState('')
+  const [prizeQuantity, setPrizeQuantity] = useState(1)
   const [sellerCode, setSellerCode] = useState('')
   const [sellerMessage, setSellerMessage] = useState('')
   const [sellerPrize, setSellerPrize] = useState(null)
@@ -35,14 +40,17 @@ export default function Admin() {
     setProfile(p)
     const [c, co] = await Promise.all([
       supabase.from('campaigns').select('*').order('created_at', { ascending: false }),
-      supabase.from('participation_codes').select('id, campaign_id, code_hint, status, assigned_prize_id, tickets_count, created_at').order('created_at', { ascending: false }).limit(100)
+      supabase.from('participation_codes').select('id, campaign_id, code_hint, status, assigned_prize_id, tickets_count, created_at').order('created_at', { ascending: false }).limit(100),
+      supabase.from('prizes').select('*').order('created_at', { ascending: false })
     ])
-    if (c.error || co.error) setMessage('No se pudieron cargar los datos. Revisá las tablas y permisos RLS.')
+    if (c.error || co.error || arguments[0]?.error) setMessage('No se pudieron cargar los datos. Revisá las tablas y permisos RLS.')
     setCampaigns(c.data || [])
     setCodes(co.data || [])
+    setPrizes(arguments[0]?.data || [])
+    if (!selectedCampaign && c.data?.length) setSelectedCampaign(c.data[0].id)
   }
 
-  async function login(e) {
+  async function createPrize(e) {\n    e.preventDefault()\n    if (!selectedCampaign) return setMessage('Seleccioná una campaña.')\n    setBusy(true); setMessage('')\n    const { error } = await supabase.from('prizes').insert({ campaign_id: selectedCampaign, name: prizeName.trim(), description: prizeDescription.trim(), quantity_total: Number(prizeQuantity), quantity_reserved: 0, active: true })\n    setBusy(false)\n    if (error) { setMessage('No se pudo guardar el premio: ' + error.message); return }\n    setPrizeName(''); setPrizeDescription(''); setPrizeQuantity(1); setMessage('Premio agregado correctamente.'); await load()\n  }\n\n  async function activateCampaign() {\n    if (!selectedCampaign) return setMessage('Seleccioná una campaña.')\n    const { error } = await supabase.from('campaigns').update({ status: 'active' }).eq('id', selectedCampaign)\n    if (error) { setMessage('No se pudo activar: ' + error.message); return }\n    setMessage('Campaña activada. Ya puede emitir códigos con premios disponibles.'); await load()\n  }\n\n  async function login(e) {
     e.preventDefault(); setBusy(true); setMessage('')
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     setBusy(false); if (error) setMessage(error.message)
@@ -82,7 +90,7 @@ export default function Admin() {
     if (!campaigns.length) return setMessage('Primero necesitás crear una campaña.')
     setBusy(true); setMessage('')
     const { data, error } = await supabase.functions.invoke('issue-codes', {
-      body: { campaign_id: campaigns[0].id, quantity: Number(count), tickets_per_code: Number(ticketsPerCode) }
+      body: { campaign_id: selectedCampaign || campaigns[0].id, quantity: Number(count), tickets_per_code: Number(ticketsPerCode) }
     })
     setBusy(false)
     if (error) { setMessage(error.message); return }
@@ -117,6 +125,7 @@ export default function Admin() {
       <div className="stats-grid"><div className="stat-card"><span>Campañas</span><strong>{campaigns.length}</strong></div><div className="stat-card"><span>Códigos registrados</span><strong>{codes.length}</strong></div></div>
       <section className="panel"><h2>Crear nueva campaña</h2><p className="muted">Primero creá una campaña. Se guardará como borrador y todavía no estará disponible para participantes.</p><form className="stack-form" onSubmit={createCampaign}><label>Nombre de la campaña<input required maxLength="100" value={campaignName} onChange={e=>setCampaignName(e.target.value)} placeholder="Ej.: Raspadita especial de fin de año"/></label><label>Descripción<textarea maxLength="1000" value={campaignDescription} onChange={e=>setCampaignDescription(e.target.value)} placeholder="Detalles y condiciones generales"/></label><button disabled={busy}>{busy?'Guardando…':'Crear campaña'}</button></form></section>
       <section className="panel"><h2>Campañas registradas</h2>{campaigns.length ? <div className="table-wrap"><table><thead><tr><th>Nombre</th><th>Estado</th><th>Creada</th></tr></thead><tbody>{campaigns.map(c=><tr key={c.id}><td>{c.name}</td><td>{c.status}</td><td>{new Date(c.created_at).toLocaleDateString('es-PY')}</td></tr>)}</tbody></table></div> : <p className="muted">Todavía no hay campañas creadas.</p>}</section>
+      <section className="panel"><h2>Premios de la campaña</h2><form className="stack-form" onSubmit={createPrize}><label>Campaña<select required value={selectedCampaign} onChange={e=>setSelectedCampaign(e.target.value)}>{campaigns.map(c=><option key={c.id} value={c.id}>{c.name} · {c.status}</option>)}</select></label><label>Nombre del premio<input required maxLength="100" value={prizeName} onChange={e=>setPrizeName(e.target.value)} placeholder="Ej.: Vale de G. 50.000"/></label><label>Descripción<input maxLength="500" value={prizeDescription} onChange={e=>setPrizeDescription(e.target.value)}/></label><label>Cantidad disponible<input type="number" min="1" max="10000" required value={prizeQuantity} onChange={e=>setPrizeQuantity(e.target.value)}/></label><button disabled={busy || !campaigns.length}>{busy?'Guardando…':'Agregar premio'}</button></form>{prizes.filter(p=>p.campaign_id===selectedCampaign).map(p=><div className="share-row" key={p.id}><div><strong>{p.name}</strong><small>Reservados: {p.quantity_reserved} / {p.quantity_total}</small></div></div>)}<button className="secondary" disabled={!selectedCampaign || !prizes.some(p=>p.campaign_id===selectedCampaign && p.active && p.quantity_reserved<p.quantity_total)} onClick={activateCampaign}>Activar campaña seleccionada</button></section>
       <section className="panel"><h2>Generar participaciones y enlaces</h2><p className="muted">Los enlaces llevan el código precargado en la página de juego. Compartilos por WhatsApp o copialos para enviarlos por otro medio.</p><form className="generate-row" onSubmit={generateCodes}><label>Cantidad de códigos<input type="number" min="1" max="500" value={count} onChange={e=>setCount(e.target.value)}/></label><label>Tickets por código<input type="number" min="1" max="100" value={ticketsPerCode} onChange={e=>setTicketsPerCode(e.target.value)}/></label><p className="muted">Total previsto: {Number(count || 0) * Number(ticketsPerCode || 0)} tickets</p><button disabled={busy || !campaigns.length}>{busy?'Procesando…':'Generar códigos'}</button></form>{!campaigns.length&&<p className="muted">Todavía no hay campañas. Creá una campaña antes de generar códigos.</p>}</section>
       {issuedLinks.length>0&&<section className="panel"><h2>Enlaces recién generados</h2><p className="muted">Guardá o compartí estos enlaces ahora. Por seguridad, el código completo no se vuelve a mostrar después de salir de esta sesión.</p>{issuedLinks.map((item,i)=><div className="share-row" key={i}><div><strong>{item.code}</strong><small>{item.url}</small></div><button className="secondary" onClick={()=>navigator.clipboard.writeText(item.url)}>Copiar</button><button className="whatsapp" onClick={()=>shareWhatsApp(item.url,item.code)}>WhatsApp</button></div>)}</section>}
       <section className="panel"><h2>Códigos recientes</h2><div className="table-wrap"><table><thead><tr><th>Referencia</th><th>Tickets</th><th>Estado</th><th>Enlace</th></tr></thead><tbody>{codes.map(c=><tr key={c.id}><td>{c.code_hint}</td><td>{c.tickets_count}</td><td>{c.status}</td><td><span className="muted">El enlace completo solo se entrega al generarlo.</span></td></tr>)}</tbody></table></div></section>
