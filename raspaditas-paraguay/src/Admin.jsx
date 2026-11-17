@@ -24,7 +24,7 @@ export default function Admin() {
 
   async function load() {
     const { data: p, error: pe } = await supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle()
-    if (pe || !p || p.role !== 'admin') { setProfile(null); setMessage('Tu usuario no tiene permisos de administrador. Asigná el rol admin desde Supabase.'); return }
+    if (pe || !p || !['admin', 'super_admin'].includes(p.role)) { setProfile(null); setMessage('Tu usuario no tiene permisos de administrador. Solicitá al administrador principal que te asigne un rol autorizado.'); return }
     setProfile(p)
     const [c, co] = await Promise.all([
       supabase.from('campaigns').select('*').order('created_at', { ascending: false }),
