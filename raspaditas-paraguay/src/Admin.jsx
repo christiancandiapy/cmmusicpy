@@ -129,7 +129,19 @@ export default function Admin() {
       body: { campaign_id: selectedCampaign || campaigns[0].id, quantity: Number(count), tickets_per_code: Number(ticketsPerCode) }
     })
     setBusy(false)
-    if (error) { setMessage(error.message); return }
+    if (error) {
+      let detail = error.message || 'No se pudo generar los códigos.'
+      try {
+        const response = error.context
+        if (response && typeof response.json === 'function') {
+          const payload = await response.json()
+          detail = payload?.error || payload?.message || detail
+        }
+      } catch (_) {}
+      setMessage(detail)
+      return
+    }
+    if (data?.error) { setMessage(data.error); return }
     const generated = data?.codes || []
     setIssuedLinks(generated.map(item => ({ code: item.code, url: makeShareUrl(item.code) })))
     setMessage(generated.length ? 'Códigos generados. Copiá o compartí los enlaces ahora: el código completo se muestra una sola vez.' : (data?.message || 'No se generaron códigos.'))
