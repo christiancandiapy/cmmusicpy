@@ -138,3 +138,26 @@ create table if not exists public.tickets (
 create index if not exists tickets_campaign_id_idx on public.tickets(campaign_id);
 create index if not exists tickets_code_id_idx on public.tickets(code_id);
 alter table public.tickets enable row level security;
+
+-- Roles y canje individual de premios (sin almacenar códigos en texto plano).
+do $$ begin
+  alter type public.app_role add value if not exists 'seller';
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create type public.redemption_status as enum ('pending','redeemed','revoked');
+exception when duplicate_object then null; end $$;
+
+create table if not exists public.prize_redemptions (
+  id uuid primary key default gen_random_uuid(),
+  ticket_id uuid not null unique references public.tickets(id) on delete restrict,
+  campaign_id uuid not null references public.campaigns(id) on delete restrict,
+  prize_id uuid not null references public.prizes(id) on delete restrict,
+  redeem_code_hash text not null unique,
+  redeem_code_hint text not null,
+  status public.redemption_status not null default 'pending',
+  redeemed_by uuid references auth.users(id),
+  redeemed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+alter table public.prize_redemptions enable row level security;
