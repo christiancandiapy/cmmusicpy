@@ -18,3 +18,24 @@ footer{text-align:center;color:#7e8ba1;font-size:11px;padding:34px 15px 22px}
 @media(max-width:520px){.hero{margin-top:5vh;padding:36px 20px}.top{padding:18px}}
 /* Panel administrativo */
 a{color:#f4cf73}.admin-shell{min-height:100vh;background:#0b1020;color:#f8fafc;padding:20px}.login-card{width:min(430px,100%);margin:8vh auto;padding:30px;border:1px solid #ffffff20;border-radius:20px;background:#ffffff09;display:grid;gap:13px}.login-card p,.muted{color:#9ba8bc;font-size:13px;line-height:1.5}.back-link{font-size:12px;text-decoration:none;color:#f4cf73}.login-card label,.generate-row label{font-size:12px;color:#d6deea;font-weight:700;display:grid;gap:7px}.login-card input,.generate-row input{width:100%;padding:13px;border-radius:10px;border:1px solid #ffffff30;background:#0a1020;color:white;font:inherit}.login-card button,.generate-row button{border:0;border-radius:10px;padding:14px;background:linear-gradient(100deg,#f5d77e,#d69a36);font-weight:900;color:#211707;cursor:pointer}.admin-top{max-width:1200px;margin:auto;display:flex;align-items:center;justify-content:space-between;padding:6px 0 22px;border-bottom:1px solid #ffffff18}.brand-link{display:flex;align-items:center;gap:12px}.brand-link strong{display:block;font-size:13px}.brand-link small{display:block;color:#aab4c7;font-size:11px;margin-top:4px}.secondary,.whatsapp{background:#ffffff12;color:#f5d77e;border:1px solid #ffffff24;border-radius:9px;padding:10px 13px;cursor:pointer}.whatsapp{background:#146c43;color:white}.admin-content{max-width:1200px;margin:24px auto}.admin-heading{display:flex;align-items:center;justify-content:space-between;gap:15px}.stats-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:20px 0}.stat-card,.panel{border:1px solid #ffffff18;background:#ffffff08;border-radius:14px;padding:18px}.stat-card span{display:block;color:#9ba8bc;font-size:12px}.stat-card strong{display:block;font-size:30px;color:#f4cf73;margin-top:7px}.panel{margin:16px 0}.panel h2{font-size:17px;margin:0 0 12px}.generate-row{display:flex;align-items:end;gap:12px;flex-wrap:wrap}.generate-row label{width:min(260px,100%)}.share-row{display:flex;align-items:center;gap:9px;padding:12px 0;border-top:1px solid #ffffff14;flex-wrap:wrap}.share-row div{flex:1;min-width:180px;overflow-wrap:anywhere}.share-row strong,.share-row small{display:block}.share-row small{font-size:11px;color:#9ba8bc;margin-top:5px}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:12px}th,td{text-align:left;padding:11px;border-bottom:1px solid #ffffff14;white-space:nowrap}th{color:#9ba8bc}.legal-note{font-size:11px;color:#9ba8bc;line-height:1.5;margin:20px 0}
+
+
+/* Formularios del panel y tarjetas de tickets */
+.stack-form{display:grid;gap:14px;margin-top:14px}
+.stack-form label{display:grid;gap:7px;color:#d6deea;font-size:13px;font-weight:700}
+.stack-form input,.stack-form textarea,.stack-form select{width:100%;min-width:0;padding:13px;border-radius:10px;border:1px solid #ffffff30;background:#0a1020;color:#f8fafc;font:inherit}
+.stack-form textarea{min-height:90px;resize:vertical}
+.stack-form button{border:0;border-radius:10px;padding:14px;background:linear-gradient(100deg,#f5d77e,#d69a36);font-weight:900;color:#211707;cursor:pointer}
+.ticket-area{margin-top:28px;text-align:left}
+.ticket-area h2{font-size:20px;color:#f4cf73}
+.ticket-area>p{font-size:13px;color:#bac4d5}
+.ticket-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:12px;margin-top:16px}
+.ticket-card{min-width:0;padding:15px;border:1px solid #ffffff24;border-radius:14px;background:#ffffff0d;display:grid;gap:12px}
+.ticket-card>strong{font-size:13px}
+.ticket-card button{border:0;border-radius:9px;padding:12px 8px;background:linear-gradient(100deg,#f5d77e,#d69a36);font-weight:900;color:#211707}
+.ticket-card button:disabled{opacity:.55}
+.ticket-result,.ticket-win{padding:12px;border-radius:9px;background:#ffffff12;font-size:13px;overflow-wrap:anywhere}
+.ticket-win{border:1px solid #d6aa4b;background:#d6aa4b18}
+.ticket-win p{margin:10px 0 0}
+.ticket-win small{display:block;color:#f5d77e;margin-top:6px}
+@media(max-width:520px){.admin-shell{padding:16px}.admin-heading{align-items:flex-start}.generate-row{display:grid}.generate-row label{width:100%}.stats-grid{gap:10px}.stat-card,.panel{padding:15px}}
