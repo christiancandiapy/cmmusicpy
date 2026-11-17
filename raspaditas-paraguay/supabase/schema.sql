@@ -105,3 +105,36 @@ create policy "staff read audit" on public.audit_logs for select to authenticate
 
 -- Las escrituras públicas quedan deshabilitadas. El canje requiere Edge Function
 -- segura y transacción atómica para validar código, campaña e inventario.
+
+-- Tickets individuales por código: cada ticket tendrá resultado propio.
+-- La asignación de premios y el raspado público deben hacerse exclusivamente
+-- mediante funciones servidor con transacción atómica; no desde el navegador.
+do $$ begin
+  create type public.ticket_status as enum ('available','revealed','cancelled');
+exception when duplicate_object then null; end $$;
+
+alter table public.participation_codes
+  add column if not exists tickets_count integer not null default 1;
+
+do $$ begin
+  alter table public.participation_codes
+    add constraint participation_codes_tickets_count_positive
+    check (tickets_count > 0);
+exception when duplicate_object then null; end $$;
+
+create table if not exists public.tickets (
+  id uuid primary key default gen_random_uuid(),
+  code_id uuid not null references public.participation_codes(id) on delete restrict,
+  campaign_id uuid not null references public.campaigns(id) on delete restrict,
+  ticket_number integer not null check (ticket_number > 0),
+  prize_id uuid references public.prizes(id) on delete restrict,
+  result_label text not null default 'Sin premio',
+  status public.ticket_status not null default 'available',
+  revealed_at timestamptz,
+  created_at timestamptz not null default now(),
+  unique (code_id, ticket_number)
+);
+
+create index if not exists tickets_campaign_id_idx on public.tickets(campaign_id);
+create index if not exists tickets_code_id_idx on public.tickets(code_id);
+alter table public.tickets enable row level security;
